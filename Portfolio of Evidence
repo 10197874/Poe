@@ -1,0 +1,282 @@
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+
+namespace RecipeProgram
+{
+    public partial class MainForm : Form
+    {
+        private List<RecipeItem> recipes = new List<RecipeItem>();
+
+        public MainForm()
+        {
+            InitializeComponent();
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            RefreshRecipeList();
+        }
+
+        private void RefreshRecipeList()
+        {
+            recipeListBox.Items.Clear();
+            recipeListBox.Items.AddRange(recipes.OrderBy(r => r.Name).ToArray());
+        }
+
+        private void addButton_Click(object sender, EventArgs e)
+        {
+            RecipeForm recipeForm = new RecipeForm();
+            DialogResult result = recipeForm.ShowDialog();
+
+            if (result == DialogResult.OK)
+            {
+                recipes.Add(recipeForm.CreatedRecipe);
+                RefreshRecipeList();
+            }
+        }
+
+        private void resetButton_Click(object sender, EventArgs e)
+        {
+            RecipeItem selectedRecipe = GetSelectedRecipe();
+
+            if (selectedRecipe != null)
+            {
+                selectedRecipe.ResetQuantities();
+                MessageBox.Show("Ingredient quantities reset to 0.", "Reset Quantities");
+            }
+        }
+
+        private void clearButton_Click(object sender, EventArgs e)
+        {
+            RecipeItem selectedRecipe = GetSelectedRecipe();
+
+            if (selectedRecipe != null)
+            {
+                recipes.Remove(selectedRecipe);
+                RefreshRecipeList();
+                MessageBox.Show("Recipe cleared.", "Clear Recipe");
+            }
+        }
+
+        private void viewButton_Click(object sender, EventArgs e)
+        {
+            RecipeItem selectedRecipe = GetSelectedRecipe();
+
+            if (selectedRecipe != null)
+            {
+                RecipeViewForm recipeViewForm = new RecipeViewForm(selectedRecipe);
+                recipeViewForm.ShowDialog();
+            }
+        }
+
+        private RecipeItem GetSelectedRecipe()
+        {
+            if (recipeListBox.SelectedItem != null)
+                return (RecipeItem)recipeListBox.SelectedItem;
+
+            MessageBox.Show("Please select a recipe.", "No Recipe Selected");
+            return null;
+        }
+
+        private void filterButton_Click(object sender, EventArgs e)
+        {
+            FilterForm filterForm = new FilterForm();
+            DialogResult result = filterForm.ShowDialog();
+
+            if (result == DialogResult.OK)
+            {
+                List<RecipeItem> filteredRecipes = recipes;
+
+                if (!string.IsNullOrWhiteSpace(filterForm.IngredientName))
+                {
+                    filteredRecipes = filteredRecipes.Where(r => r.Ingredients.Any(i => i.Name.Equals(filterForm.IngredientName, StringComparison.OrdinalIgnoreCase))).ToList();
+                }
+
+                if (!string.IsNullOrWhiteSpace(filterForm.FoodGroup))
+                {
+                    filteredRecipes = filteredRecipes.Where(r => r.Ingredients.Any(i => i.FoodGroup.Equals(filterForm.FoodGroup, StringComparison.OrdinalIgnoreCase))).ToList();
+                }
+
+                if (filterForm.MaxCalories > 0)
+                {
+                    filteredRecipes = filteredRecipes.Where(r => r.GetTotalCalories() <= filterForm.MaxCalories).ToList();
+                }
+
+                recipeListBox.Items.Clear();
+                recipeListBox.Items.AddRange(filteredRecipes.OrderBy(r => r.Name).ToArray());
+            }
+        }
+    }
+
+    public class RecipeItem
+    {
+        public string Name { get; set; }
+        public List<Ingredient> Ingredients { get; set; }
+        public List<string> Steps { get; set; }
+
+        public RecipeItem(string name, List<Ingredient> ingredients, List<string> steps)
+        {
+            Name = name;
+            Ingredients = ingredients;
+            Steps = steps;
+        }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+
+        public void ResetQuantities()
+        {
+            foreach (Ingredient ingredient in Ingredients)
+            {
+                ingredient.Quantity = 0;
+            }
+        }
+
+        public int GetTotalCalories()
+        {
+            int totalCalories = 0;
+
+            foreach (Ingredient ingredient in Ingredients)
+            {
+                totalCalories += ingredient.Calories;
+            }
+
+            return totalCalories;
+        }
+    }
+
+    public class Ingredient
+    {
+        public string Name { get; set; }
+        public double Quantity { get; set; }
+        public string Unit { get; set; }
+        public int Calories { get; set; }
+        public string FoodGroup { get; set; }
+
+        public Ingredient(string name, double quantity, string unit, int calories, string foodGroup)
+        {
+            Name = name;
+            Quantity = quantity;
+            Unit = unit;
+            Calories = calories;
+            FoodGroup = foodGroup;
+        }
+    }
+
+    // Recipe Form (to create a new recipe)
+    public class RecipeForm : Form
+    {
+        private TextBox nameTextBox;
+        private Button addIngredientButton;
+        private Button addStepButton;
+        private Button saveButton;
+
+        private List<Ingredient> ingredients = new List<Ingredient>();
+        private List<string> steps = new List<string>();
+
+        public RecipeItem CreatedRecipe { get; private set; }
+
+        public RecipeForm()
+        {
+            InitializeComponent();
+        }
+
+        private void InitializeComponent()
+        {
+            // Initialize form controls
+            // ...
+
+            // Handle control events
+            addIngredientButton.Click += AddIngredientButton_Click;
+            addStepButton.Click += AddStepButton_Click;
+            saveButton.Click += SaveButton_Click;
+
+            // Add controls to the form
+            // ...
+        }
+
+        private void AddIngredientButton_Click(object sender, EventArgs e)
+        {
+            // Handle adding ingredients
+            // ...
+        }
+
+        private void AddStepButton_Click(object sender, EventArgs e)
+        {
+            // Handle adding steps
+            // ...
+        }
+
+        private void SaveButton_Click(object sender, EventArgs e)
+        {
+            // Save the recipe and close the form
+            CreatedRecipe = new RecipeItem(nameTextBox.Text, ingredients, steps);
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+    }
+
+    // Recipe View Form (to view recipe details)
+    public class RecipeViewForm : Form
+    {
+        public RecipeViewForm(RecipeItem recipe)
+        {
+            // Initialize the form with recipe details
+            // ...
+        }
+    }
+
+    // Filter Form (to filter recipes by ingredient, food group, and max calories)
+    public class FilterForm : Form
+    {
+        private TextBox ingredientTextBox;
+        private TextBox foodGroupTextBox;
+        private TextBox maxCaloriesTextBox;
+        private Button applyButton;
+
+        public string IngredientName { get; private set; }
+        public string FoodGroup { get; private set; }
+        public int MaxCalories { get; private set; }
+
+        public FilterForm()
+        {
+            InitializeComponent();
+        }
+
+        private void InitializeComponent()
+        {
+            // Initialize form controls
+            // ...
+
+            // Handle control events
+            applyButton.Click += ApplyButton_Click;
+
+            // Add controls to the form
+            // ...
+        }
+
+        private void ApplyButton_Click(object sender, EventArgs e)
+        {
+            // Set the filter values and close the form
+            IngredientName = ingredientTextBox.Text;
+            FoodGroup = foodGroupTextBox.Text;
+
+            if (int.TryParse(maxCaloriesTextBox.Text, out int maxCalories))
+            {
+                MaxCalories = maxCalories;
+            }
+            else
+            {
+                MaxCalories = 0;
+            }
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+    }
+}
